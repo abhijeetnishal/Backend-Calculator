@@ -5,7 +5,7 @@ import calculatorController from "../controllers/calculatorController";
 const calculatorRouter = express.Router();
 
 //create an endpoint to reset the calculator 
-calculatorRouter.get('/reset', calculatorController.resetFunction);
+calculatorRouter.get('/reset/:id', calculatorController.resetFunction);
 
 //create an endpoint to perform operation on 2 numbers and initialize the calculator 
 calculatorRouter.post('/init', calculatorController.initFunction);
