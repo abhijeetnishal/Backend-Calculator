@@ -31,6 +31,23 @@ function calculateResult(num1: string, num2: string, operator: string){
     return result;
 }
 
+function calculateUndoResult(num1: string, num2: string, operator: string){
+    let firstNumber = Number(num1);
+    let secondNumber = Number(num2);
+    let result;
+
+    if(operator == '+')
+        result = firstNumber - secondNumber;
+    else if(operator == '-')
+        result = firstNumber + secondNumber;
+    else if(operator == '*')
+        result = firstNumber / secondNumber;
+    else
+        result = firstNumber * secondNumber;
+
+    return result;
+}
+
 const resetFunction = async (req: Request, res: Response) => {
     //Taking user data from client
     const Id = req.params.id;
@@ -133,41 +150,90 @@ const operationFunction = async (req: Request, res: Response) => {
                         const num1 = cookieData.result;
                         const totalOps = cookieData.totalOps + 1;
 
-                        const result = calculateResult(num1, num, operator);
+                        //List to track operators and number for undo functionality
+                        let operatorNumberList = cookieData || [];
 
-                        //Generate unique Id
-                        const calculatorId = uuidv4();
+                        const result = calculateResult(num1, num, operator);
 
                         const data = {
                             result: result,
                             totalOps: totalOps
                         }
 
-                        //Store data using cookies
-                        res.cookie(calculatorId, data);
+                        //Add the new operator with number as string
+                        operatorNumberList.push(operator + num);
+
+                        //Store data using cookie
+                        res.cookie(Id, {...data, list: operatorNumberList});
 
                         //Return the response
-                        return res.status(200).json({...data, Id: calculatorId});
+                        return res.status(200).json({...data, Id: Id});
                     }
                 }
                 else{
-                    return res.status(400).json('enter invalid numbers');
+                    return res.status(400).json('enter valid numbers');
                 }
             }
             else{
-                return res.status(400).json('Invalid operator');
+                return res.status(400).json('invalid operator');
             }
+        }
+    }
+    catch (error) {
+        console.log(error);
+        res.status(500).json('internal server error: ' + error);
+    }
+}
+
+//clear the cookie to logout
+const undoFunction = (req: Request, res: Response) => {
+    try {
+        //taking user data from client
+        const { Id } = req.body;
+
+        //validate input
+        if(!Id) {
+            //Bad request (400)
+            return res.status(400).json({ message: 'enter required input fields' });
+        }
+        else{
+            //Get data from cookie
+            const cookieData = req.cookies.Id;
+
+            //Get previous result and totalOps
+            const num1 = cookieData.result;
+            const totalOps = cookieData.totalOps - 1;
+
+            //Get list from cookie
+            const operatorNumberList = cookieData.list
+
+            //Get operator and num2
+            const operator = operatorNumberList[operatorNumberList.length - 1][0];
+            let num2 = operatorNumberList[operatorNumberList.length - 1];
+            num2 = num2.substr(1, num2.length);
+
+            //Calculate the undo result
+            const result = calculateUndoResult(num1, num2, operator);
+
+            const data = {
+                result: result,
+                totalOps: totalOps
+            }
+
+            //Remove operator with number as string from list because of undo operation
+            operatorNumberList.pop();
+
+            //Store data using cookies
+            res.cookie(Id, {...data, list: operatorNumberList});
+
+            //Return the response
+            return res.status(200).json({...data, Id: Id});
         }
     }
     catch (error) {
         console.log(error);
         res.status(500).json('internal server error');
     }
-}
-
-//clear the cookie to logout
-const undoFunction = (req: Request, res: Response) => {
-    res.clearCookie('access_token').json('user logged out');
 }
 
 export default {
