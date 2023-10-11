@@ -33,3 +33,5 @@ app.get('/', (req: Request, res: Response) => {
 app.listen(port, () => {
     console.log('Server listening at port ' + port);
 })
+
+export default app;

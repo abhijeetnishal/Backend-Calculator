@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-
+let calculatorId: string;
 
 function operatorValidation(operator: string){
     if(operator == '+' || operator == '-' || operator == '*' || operator == '/')
@@ -10,7 +10,7 @@ function operatorValidation(operator: string){
 }
 
 function isNumber(numberString: string) {
-    //Use a regular expression to check if the string is a number
+    //Regular expression to check if the string is a number or not
     return /^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/.test(numberString);
 }
 
@@ -48,33 +48,7 @@ function calculateUndoResult(num1: string, num2: string, operator: string){
     return result;
 }
 
-const resetFunction = async (req: Request, res: Response) => {
-    //Taking user data from client
-    const Id = req.params.id;
 
-    //Using try catch for error handling
-    try {
-        if(!Id) {
-            //Bad request (400)
-            return res.status(400).json({ message: 'enter required details' });
-        }
-        else{
-            //clear the cookie to clear instance
-            res.clearCookie(Id);
-
-            const response = {
-                success: true,
-                message: `calculator ${Id} is now reset`
-            }
-
-            return res.status(200).json({ response });
-        }
-    }
-    catch (error) {
-        console.log(error);
-        res.status(500).json('internal server error: ' + error);
-    }
-}
 
 const initFunction = async (req: Request, res: Response) => {
     //Taking data from request
@@ -90,14 +64,17 @@ const initFunction = async (req: Request, res: Response) => {
         else{
             //Operator validation
             if(operatorValidation(operator)){
+
                 if(isNumber(num1) && isNumber(num2)){
+
                     if(operator == '/' && Number(num2) === 0)
                         return res.status(400).json('zero division error');
                     else{
                         const result = calculateResult(num1, num2, operator);
 
                         //Generate unique Id
-                        const calculatorId = uuidv4();
+                        calculatorId = uuidv4();
+                        console.log(calculatorId);
 
                         const data = {
                             result: result,
@@ -128,7 +105,7 @@ const initFunction = async (req: Request, res: Response) => {
 
 const operationFunction = async (req: Request, res: Response) => {
     try {
-        //taking user data from client
+        //Taking data from request
         const { operator, num, Id } = req.body;
 
         //validate input
@@ -144,7 +121,9 @@ const operationFunction = async (req: Request, res: Response) => {
             else{
                 //Operator validation
                 if(operatorValidation(operator)){
+
                     if(isNumber(num)){
+
                         if(operator == '/' && Number(num) === 0)
                             return res.status(400).json('zero division error');
                         else{
@@ -194,7 +173,7 @@ const operationFunction = async (req: Request, res: Response) => {
 //clear the cookie to logout
 const undoFunction = (req: Request, res: Response) => {
     try {
-        //taking user data from client
+        //Taking data from request
         const { Id } = req.body;
 
         //validate input
@@ -252,7 +231,38 @@ const undoFunction = (req: Request, res: Response) => {
     }
 }
 
+const resetFunction = async (req: Request, res: Response) => {
+    //Taking data from request
+    const Id = req.params.id;
+
+    //Using try catch for error handling
+    try {
+        if(!Id) {
+            //Bad request (400)
+            return res.status(400).json({ message: 'enter required details' });
+        }
+        else{
+            //clear the cookie to clear instance
+            res.clearCookie(Id);
+
+            const response = {
+                success: true,
+                message: `calculator ${Id} is now reset`
+            }
+
+            return res.status(200).json(response);
+        }
+    }
+    catch (error) {
+        console.log(error);
+        res.status(500).json('internal server error: ' + error);
+    }
+}
+
 export default {
+    calculatorId,
+    operatorValidation,
+    isNumber,
     resetFunction,
     initFunction,
     operationFunction,
