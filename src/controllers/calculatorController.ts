@@ -137,45 +137,51 @@ const operationFunction = async (req: Request, res: Response) => {
             return res.status(400).json({ message: 'enter required input fields' });
         }
         else {
-            //Operator validation
-            if(operatorValidation(operator)){
-                if(isNumber(num)){
-                    if(operator == '/')
-                        return res.status(400).json('zero division error');
-                    else{
-                        //Get data from cookies
-                        const cookieData = req.cookies.Id;
+            //Check calculator is initialised or not
+            if(!req.cookies[Id]){
+                return res.status(404).json(`calculator with Id ${Id} not initialised`);
+            }
+            else{
+                //Operator validation
+                if(operatorValidation(operator)){
+                    if(isNumber(num)){
+                        if(operator == '/' && Number(num) === 0)
+                            return res.status(400).json('zero division error');
+                        else{
+                            //Get data from cookies
+                            const cookieData = req.cookies[Id];
 
-                        //Get previous result and totalOps
-                        const num1 = cookieData.result;
-                        const totalOps = cookieData.totalOps + 1;
+                            //Get previous result and totalOps
+                            const num1 = cookieData.result;
+                            const totalOps = cookieData.totalOps + 1;
 
-                        //List to track operators and number for undo functionality
-                        let operatorNumberList = cookieData || [];
+                            //List to track operators and number for undo functionality
+                            let operatorNumberList = cookieData.list || [];
 
-                        const result = calculateResult(num1, num, operator);
+                            const result = calculateResult(num1, num, operator);
 
-                        const data = {
-                            result: result,
-                            totalOps: totalOps
+                            const data = {
+                                result: result,
+                                totalOps: totalOps
+                            }
+
+                            //Add the new operator with number as string
+                            operatorNumberList.push(operator + num);
+
+                            //Store data using cookie
+                            res.cookie(Id, {...data, list: operatorNumberList});
+
+                            //Return the response
+                            return res.status(200).json({...data, Id: Id});
                         }
-
-                        //Add the new operator with number as string
-                        operatorNumberList.push(operator + num);
-
-                        //Store data using cookie
-                        res.cookie(Id, {...data, list: operatorNumberList});
-
-                        //Return the response
-                        return res.status(200).json({...data, Id: Id});
+                    }
+                    else{
+                        return res.status(400).json('enter valid numbers');
                     }
                 }
                 else{
-                    return res.status(400).json('enter valid numbers');
+                    return res.status(400).json('invalid operator');
                 }
-            }
-            else{
-                return res.status(400).json('invalid operator');
             }
         }
     }
@@ -197,37 +203,47 @@ const undoFunction = (req: Request, res: Response) => {
             return res.status(400).json({ message: 'enter required input fields' });
         }
         else{
-            //Get data from cookie
-            const cookieData = req.cookies.Id;
-
-            //Get previous result and totalOps
-            const num1 = cookieData.result;
-            const totalOps = cookieData.totalOps - 1;
-
-            //Get list from cookie
-            const operatorNumberList = cookieData.list
-
-            //Get operator and num2
-            const operator = operatorNumberList[operatorNumberList.length - 1][0];
-            let num2 = operatorNumberList[operatorNumberList.length - 1];
-            num2 = num2.substr(1, num2.length);
-
-            //Calculate the undo result
-            const result = calculateUndoResult(num1, num2, operator);
-
-            const data = {
-                result: result,
-                totalOps: totalOps
+            //Check calculator is initialised or not
+            if(!req.cookies[Id]){
+                return res.status(404).json(`calculator with Id ${Id} not initialised`);
             }
+            else{
+                //Get data from cookie
+                const cookieData = req.cookies[Id];
 
-            //Remove operator with number as string from list because of undo operation
-            operatorNumberList.pop();
+                //Get previous result and totalOps
+                const num1 = cookieData.result;
+                const totalOps = cookieData.totalOps - 1;
 
-            //Store data using cookies
-            res.cookie(Id, {...data, list: operatorNumberList});
+                //Get list from cookie
+                const operatorNumberList = cookieData.list;
 
-            //Return the response
-            return res.status(200).json({...data, Id: Id});
+                //Check if you reach init step then no more undo operations
+                if(operatorNumberList.length === 0)
+                    return res.status(400).json('no more undo operations');
+
+                //Get operator and num2
+                const operator = operatorNumberList[operatorNumberList.length - 1][0];
+                let num2 = operatorNumberList[operatorNumberList.length - 1];
+                num2 = num2.substr(1, num2.length);
+
+                //Calculate the undo result
+                const result = calculateUndoResult(num1, num2, operator);
+
+                const data = {
+                    result: result,
+                    totalOps: totalOps
+                }
+
+                //Remove operator with number as string from list because of undo operation
+                operatorNumberList.pop();
+
+                //Store data using cookies
+                res.cookie(Id, {...data, list: operatorNumberList});
+
+                //Return the response
+                return res.status(200).json({...data, Id: Id});
+            }
         }
     }
     catch (error) {
