@@ -74,7 +74,6 @@ const initFunction = async (req: Request, res: Response) => {
 
                         //Generate unique Id
                         calculatorId = uuidv4();
-                        console.log(calculatorId);
 
                         const data = {
                             result: result,
